@@ -1,4 +1,3 @@
-// src/app/opportunities/[noticeId]/page.tsx
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -14,13 +13,14 @@ import { URGENCY_CONFIG } from '@/lib/constants';
 import { SET_ASIDE_LABELS } from '@/lib/sam/normalize';
 
 interface PageProps {
-  params: { noticeId: string };
+  params: Promise<{ noticeId: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps) {
+  const { noticeId } = await params;
   try {
     const client = getSamClient();
-    const opp = await client.getOpportunity(params.noticeId);
+    const opp = await client.getOpportunity(noticeId);
     return {
       title: opp?.title ?? 'Opportunity',
       description: `${opp?.type} · ${opp?.agencyName} · Due ${formatDate(opp?.responseDeadLine)}`,
@@ -31,10 +31,11 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function OpportunityDetailPage({ params }: PageProps) {
+  const { noticeId } = await params;
   let opp;
   try {
     const client = getSamClient();
-    opp = await client.getOpportunity(params.noticeId);
+    opp = await client.getOpportunity(noticeId);
   } catch {
     opp = null;
   }
@@ -50,7 +51,6 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
     <AppShell>
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-6xl mx-auto px-6 py-8">
-          {/* Back nav */}
           <Link
             href="/search"
             className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-200 transition-colors mb-6"
@@ -60,9 +60,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main content */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Header card */}
               <div className="card p-6">
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div>
@@ -84,7 +82,6 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                   </a>
                 </div>
 
-                {/* Badges */}
                 <div className="flex flex-wrap gap-2 mb-5">
                   <span className="badge badge-blue">{opp.type}</span>
                   {setAsideLabel && (
@@ -97,10 +94,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                     </span>
                   )}
                   {urgencyConfig && opp.urgencyLevel !== 'closed' && (
-                    <span className={cn(
-                      'badge',
-                      urgencyConfig.color, urgencyConfig.bg,
-                    )}>
+                    <span className={cn('badge', urgencyConfig.color, urgencyConfig.bg)}>
                       <Clock className="w-3 h-3" />
                       {opp.daysUntilDeadline === 0
                         ? 'Due today'
@@ -111,7 +105,6 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                   )}
                 </div>
 
-                {/* Meta grid */}
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   {opp.fullParentPathName && (
                     <div className="col-span-2">
@@ -142,15 +135,6 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                       </div>
                     </div>
                   )}
-                  {opp.archiveDate && (
-                    <div>
-                      <p className="label mb-1">Archive Date</p>
-                      <div className="flex items-center gap-2 text-zinc-400">
-                        <Calendar className="w-4 h-4 text-zinc-500" />
-                        {formatDate(opp.archiveDate)}
-                      </div>
-                    </div>
-                  )}
                   {opp.placeOfPerformance && (
                     <div className="col-span-2">
                       <p className="label mb-1">Place of Performance</p>
@@ -169,7 +153,6 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                 </div>
               </div>
 
-              {/* Description */}
               {opp.description && (
                 <div className="card p-6">
                   <h2 className="flex items-center gap-2 section-title mb-4">
@@ -177,18 +160,14 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                     Description
                   </h2>
                   <div
-                    className="prose prose-sm prose-invert max-w-none text-zinc-300 text-sm leading-relaxed
-                      [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-4 [&_li]:mb-1"
+                    className="prose prose-sm prose-invert max-w-none text-zinc-300 text-sm leading-relaxed"
                     dangerouslySetInnerHTML={{
-                      __html: opp.description
-                        .replace(/\n/g, '<br/>')
-                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                      __html: opp.description.replace(/\n/g, '<br/>')
                     }}
                   />
                 </div>
               )}
 
-              {/* Point of Contact */}
               {opp.pointOfContact && opp.pointOfContact.length > 0 && (
                 <div className="card p-6">
                   <h2 className="section-title mb-4">Points of Contact</h2>
@@ -219,36 +198,13 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                   </div>
                 </div>
               )}
-
-              {/* Additional links */}
-              {opp.additionalInfoLink && (
-                <div className="card p-6">
-                  <h2 className="section-title mb-3">Additional Information</h2>
-                  <a
-                    href={opp.additionalInfoLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-orange-400 hover:text-orange-300 transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    {opp.additionalInfoLink}
-                  </a>
-                </div>
-              )}
             </div>
 
-            {/* Sidebar */}
             <div className="space-y-4">
               <AiAssistant opportunity={opp} />
-
-              {/* Quick facts */}
               <div className="card p-4">
                 <h3 className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-3">Quick Facts</h3>
                 <div className="space-y-2.5 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Notice ID</span>
-                    <span className="font-mono text-xs text-zinc-300">{opp.noticeId.slice(0, 12)}…</span>
-                  </div>
                   <div className="flex justify-between">
                     <span className="text-zinc-500">Active</span>
                     <span className={opp.active === 'Yes' ? 'text-green-400' : 'text-red-400'}>
@@ -259,12 +215,6 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                     <div className="flex justify-between">
                       <span className="text-zinc-500">Base Type</span>
                       <span className="text-zinc-300">{opp.baseType}</span>
-                    </div>
-                  )}
-                  {opp.archiveType && (
-                    <div className="flex justify-between">
-                      <span className="text-zinc-500">Archive Type</span>
-                      <span className="text-zinc-300">{opp.archiveType}</span>
                     </div>
                   )}
                 </div>

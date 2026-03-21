@@ -1,7 +1,7 @@
 // src/lib/store.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { SearchParams, BusinessProfile, FavoriteOpportunity } from '@/types';
+import type { SearchParams, BusinessProfile } from '@/types';
 
 interface AppState {
   // Search
