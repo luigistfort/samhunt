@@ -1,6 +1,6 @@
-// src/app/api/opportunities/search/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { getSamClient, SamRateLimitError, SamAuthError } from '@/lib/sam/client';
 import { cacheGet, cacheSet, buildSearchCacheKey, CACHE_TTL } from '@/lib/cache';
 import { auth } from '@/lib/auth';
@@ -42,38 +42,34 @@ export async function POST(req: NextRequest) {
 
     const params: SearchParams = parsed.data;
 
-    // Check cache
     const cacheKey = buildSearchCacheKey(params);
     const cached = await cacheGet(cacheKey);
     if (cached) {
       return NextResponse.json({ ...cached, fromCache: true });
     }
 
-    // Call SAM.gov
     const client = getSamClient();
     const results = await client.search(params);
 
-    // Cache the results
     await cacheSet(cacheKey, results, CACHE_TTL.SEARCH_RESULTS);
 
-    // Log search history for authenticated users (fire-and-forget)
     const session = await auth();
     if (session?.user?.id) {
       db.searchHistory
         .create({
           data: {
             userId: session.user.id,
-            query: params as object,
+            query: params as Prisma.InputJsonValue,
             resultCount: results.total,
           },
         })
-        .catch(() => {}); // Non-blocking
+        .catch(() => {});
     }
 
     return NextResponse.json(results);
   } catch (err) {
     if (err instanceof SamRateLimitError) {
-      return NextResponse.json({ error: err.message }, { status: 429 });
+      return NextResponse.json({ error: (err as Error).message }, { status: 429 });
     }
     if (err instanceof SamAuthError) {
       return NextResponse.json(
@@ -89,7 +85,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET version for simple keyword searches from URL
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const params: SearchParams = {

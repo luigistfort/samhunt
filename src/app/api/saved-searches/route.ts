@@ -1,8 +1,8 @@
-// src/app/api/saved-searches/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 
 const SavedSearchSchema = z.object({
   name: z.string().min(1).max(100),
@@ -39,7 +39,9 @@ export async function POST(req: NextRequest) {
   const saved = await db.savedSearch.create({
     data: {
       userId: session.user.id,
-      ...parsed.data,
+      name: parsed.data.name,
+      notifyEmail: parsed.data.notifyEmail,
+      query: parsed.data.query as Prisma.InputJsonValue,
     },
   });
 
